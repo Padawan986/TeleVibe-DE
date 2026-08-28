@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeleVibe DE | Dein TV-Guide für den ganzen Tag</title>
+    <title>TeleVibe DE | Dein TV-Guide</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #0b0f19;
-            --bg-card: #151d30;
-            --bg-card-hover: #1c2742;
+            --bg-main: #09090b; /* Sehr dunkles Grau/Schwarz für edlen OLED-Look */
+            --bg-card: #18181b;
+            --bg-card-hover: #27272a;
             --primary: #3b82f6;
-            --accent: #8b5cf6;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #243049;
+            --accent: #60a5fa;
+            --text-main: #fafafa;
+            --text-muted: #a1a1aa;
+            --border: #27272a;
             --live-red: #ef4444;
         }
 
@@ -30,12 +30,13 @@
             color: var(--text-main);
             min-height: 100vh;
             padding-bottom: 3rem;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* --- HEADER --- */
         header {
-            background: rgba(11, 15, 25, 0.85);
-            backdrop-filter: blur(16px);
+            background: rgba(9, 9, 11, 0.9);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 0;
@@ -44,111 +45,134 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
         }
 
         .logo {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+
+        .logo span {
+            color: var(--primary);
         }
 
         .live-clock {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: var(--primary);
-            padding: 0.3rem 0.8rem;
-            border-radius: 99px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
 
-        /* --- CONTROLS & FILTER SECTION --- */
+        /* --- CONTROLS --- */
         .controls-wrapper {
-            padding: 1.5rem 5% 0.5rem 5%;
+            padding: 1.5rem 5% 0;
             max-width: 1400px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
         }
 
         .time-filters {
             display: flex;
-            gap: 0.6rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-            scrollbar-width: none;
-        }
-
-        .time-filters::-webkit-scrollbar {
-            display: none;
+            gap: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .filter-btn {
             background: var(--bg-card);
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 0.6rem 1.2rem;
-            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            color: var(--text-main);
+            border-color: var(--text-muted);
+        }
+
+        .filter-btn.active {
+            background: var(--text-main);
+            color: var(--bg-main);
+            border-color: var(--text-main);
             font-weight: 600;
+        }
+
+        .search-wrapper {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+        }
+
+        /* --- CHANNEL BAR --- */
+        .channel-scroll {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            scrollbar-width: none; /* Firefox */
+        }
+
+        .channel-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .channel-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.4rem 1.2rem;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
         }
 
-        .filter-btn:hover {
-            border-color: var(--primary);
-            color: var(--text-main);
-            transform: translateY(-1px);
-        }
-
-        .filter-btn.active {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-color: transparent;
-            color: white;
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-        }
-
-        .search-channel-bar {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .search-input, .channel-select {
+        .channel-btn:hover {
             background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.7rem 1rem;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s ease;
         }
 
-        .search-input {
-            flex: 1;
-            min-width: 220px;
-        }
-
-        .search-input:focus, .channel-select:focus {
+        .channel-btn.active {
+            background: rgba(59, 130, 246, 0.15);
             border-color: var(--primary);
-        }
-
-        .channel-select option {
-            background: var(--bg-card);
-            color: var(--text-main);
+            color: var(--primary);
         }
 
         /* --- MAIN GRID --- */
@@ -159,186 +183,155 @@
         }
 
         .section-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
+            align-items: flex-end;
         }
 
         .section-title {
-            font-size: 1.4rem;
+            font-size: 1.25rem;
             font-weight: 600;
         }
 
         .show-count {
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .tv-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
         }
 
-        /* --- CARD STYLING --- */
+        /* --- CARDS --- */
         .card {
             background: var(--bg-card);
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid var(--border);
-            overflow: hidden;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            transition: all 0.25 ease;
-            position: relative;
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
         .card:hover {
-            transform: translateY(-4px);
-            background: var(--bg-card-hover);
-            border-color: rgba(59, 130, 246, 0.5);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+            border-color: var(--text-muted);
         }
 
         .card-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .channel-info {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
-
-        .channel-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--primary);
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
         }
 
         .channel-name {
             font-weight: 700;
-            font-size: 1.05rem;
-        }
-
-        .genre-badge {
-            background: rgba(139, 92, 246, 0.15);
-            color: #c084fc;
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 0.25rem 0.6rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .genre-badge.live {
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.4);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
-        .card-body {
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
-        .show-time {
+            font-size: 0.95rem;
             color: var(--primary);
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.3rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .time-badge {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            background: var(--bg-main);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
         }
 
         .show-title {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
-            line-height: 1.35;
+            margin-bottom: 0.4rem;
+            line-height: 1.3;
             color: var(--text-main);
         }
 
         .show-desc {
             color: var(--text-muted);
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             line-height: 1.5;
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2; /* Kürzer für bessere Übersicht */
             -webkit-box-orient: vertical;
             overflow: hidden;
             margin-bottom: 1rem;
+            flex-grow: 1;
         }
 
-        .card-footer {
+        /* --- PROGRESS BAR (Für Live-Sendungen) --- */
+        .progress-container {
             margin-top: auto;
-            padding-top: 0.8rem;
         }
-
-        .progress-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
-
-        .progress-labels {
-            display: flex;
-            justify-content: space-between;
+        
+        .progress-text {
             font-size: 0.75rem;
             color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.3rem;
+        }
+
+        .live-indicator {
+            color: var(--live-red);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--live-red);
+            border-radius: 50%;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
         }
 
         .progress-bar-bg {
-            height: 6px;
+            height: 4px;
             background: var(--border);
-            border-radius: 99px;
+            border-radius: 4px;
             overflow: hidden;
         }
 
         .progress-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 99px;
-            transition: width 0.4s ease;
+            background: var(--live-red);
+            border-radius: 4px;
         }
 
         .no-results {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 4rem 2rem;
-            background: var(--bg-card);
-            border-radius: 16px;
-            border: 1px dashed var(--border);
+            padding: 3rem;
             color: var(--text-muted);
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px dashed var(--border);
         }
 
         @media (max-width: 768px) {
-            header {
+            .top-bar {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: stretch;
             }
-            .search-channel-bar {
-                flex-direction: column;
-            }
-            .search-input, .channel-select {
-                width: 100%;
+            .search-wrapper {
+                max-width: 100%;
             }
         }
     </style>
@@ -346,207 +339,228 @@
 <body>
 
     <header>
-        <div class="logo-container">
-            <div class="logo">TeleVibe DE</div>
-            <div class="live-clock" id="clock">00:00:00 Uhr</div>
-        </div>
+        <div class="logo">TeleVibe<span>DE</span></div>
+        <div class="live-clock" id="clock">00:00 Uhr</div>
     </header>
 
     <div class="controls-wrapper">
-        <div class="time-filters">
-            <button class="filter-btn active" onclick="setFilter('jetzt', this)">🔴 Jetzt Live</button>
-            <button class="filter-btn" onclick="setFilter('ganzer-tag', this)">📅 Ganzer Tag</button>
-            <button class="filter-btn" onclick="setFilter('morgen', this)">☕ Morgens (06-12)</button>
-            <button class="filter-btn" onclick="setFilter('nachmittag', this)">☀️ Nachmittags (12-18)</button>
-            <button class="filter-btn" onclick="setFilter('2015', this)">⭐ Prime-Time (20:15)</button>
-            <button class="filter-btn" onclick="setFilter('2200', this)">🌙 Spätprogramm (ab 22:00)</button>
+        <div class="top-bar">
+            <!-- Zeitfilter -->
+            <div class="time-filters">
+                <button class="filter-btn active" onclick="setTimeFilter('jetzt', this)">Jetzt Live</button>
+                <button class="filter-btn" onclick="setTimeFilter('2015', this)">20:15 Uhr</button>
+                <button class="filter-btn" onclick="setTimeFilter('2200', this)">Ab 22:00 Uhr</button>
+                <button class="filter-btn" onclick="setTimeFilter('ganzer-tag', this)">Ganzer Tag</button>
+            </div>
+            
+            <!-- Sucheingabe (sucht nach Titel UND Sender) -->
+            <div class="search-wrapper">
+                <input type="text" id="searchInput" class="search-input" placeholder="Titel oder Sender suchen..." oninput="applyFilters()">
+            </div>
         </div>
 
-        <div class="search-channel-bar">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Sendung, Film oder Thema suchen..." oninput="applyFilters()">
-            <select id="channelSelect" class="channel-select" onchange="applyFilters()">
-                <option value="all">Alle Sender (ARD, ZDF, RTL, Pro7...)</option>
-                <option value="Das Erste">Das Erste (ARD)</option>
-                <option value="ZDF">ZDF</option>
-                <option value="RTL">RTL</option>
-                <option value="ProSieben">ProSieben</option>
-                <option value="Sat.1">Sat.1</option>
-                <option value="VOX">VOX</option>
-                <option value="Kabel Eins">Kabel Eins</option>
-                <option value="Arte">Arte</option>
-                <option value="ZDFneo">ZDFneo</option>
-            </select>
+        <!-- Scrollbare Sender-Leiste (TV Spielfilm Reihenfolge) -->
+        <div class="channel-scroll" id="channelScroll">
+            <button class="channel-btn active" onclick="setChannelFilter('all', this)">Alle Sender</button>
+            <!-- Sender werden via JS generiert um die Sortierung beizubehalten -->
         </div>
     </div>
 
     <main>
         <div class="section-header">
-            <h2 class="section-title" id="sectionTitle">Das läuft aktuell im TV</h2>
-            <span class="show-count" id="showCount">0 Sendungen</span>
+            <h2 class="section-title" id="sectionTitle">Jetzt Live</h2>
+            <span class="show-count" id="showCount">Lade Daten...</span>
         </div>
 
         <div class="tv-grid" id="tvGrid">
-            </div>
+            <!-- Karten -->
+        </div>
     </main>
 
     <script>
-        // Umfassender EPG-Datensatz für den GANZEN Tag auf deutschen Hauptsendern
-        const fullDaySchedule = [
-            // ARD
-            { channel: 'Das Erste', title: 'Morgenmagazin', start: '05:30', end: '09:00', genre: 'News', desc: 'Interviews, Reportagen und aktuelle Nachrichten zum Start in den Tag.' },
-            { channel: 'Das Erste', title: 'Meister des Alltags', start: '09:00', end: '09:50', genre: 'Show', desc: 'Unterhaltsames Wissensquiz mit Enie van de Meiklokjes und Bodo Bach.' },
-            { channel: 'Das Erste', title: 'Rote Rosen', start: '14:10', end: '15:00', genre: 'Serie', desc: 'Spannende Geschichten um Liebe, Freundschaft und Intrigen in Lüneburg.' },
-            { channel: 'Das Erste', title: 'Sturm der Liebe', start: '15:10', end: '16:00', genre: 'Serie', desc: 'Romantische Telenovela rund um das Fünf-Sterne-Hotel Fürstenhof.' },
-            { channel: 'Das Erste', title: 'Brisant', start: '17:15', end: '18:00', genre: 'Magazin', desc: 'Boulevard- und Promimagazin mit aktuellen News aus aller Welt.' },
-            { channel: 'Das Erste', title: 'Wer weiß denn sowas?', start: '18:00', end: '18:50', genre: 'Quiz', desc: 'Kai Pflaume moderiert das schlaue Wissensspiel mit Bernhard Hoëcker und Elton.' },
-            { channel: 'Das Erste', title: 'Tagesschau', start: '20:00', end: '20:15', genre: 'News', desc: 'Die wichtigsten Nachrichten des Tages aus Deutschland und der Welt.' },
-            { channel: 'Das Erste', title: 'Tatort: Der feine Geist', start: '20:15', end: '21:45', genre: 'Krimi', desc: 'Ein tödlicher Schuss mitten in Weimar führt Lessing und Dorn in ein Geflecht aus Geldgier.' },
-            { channel: 'Das Erste', title: 'Tagesthemen', start: '21:45', end: '22:15', genre: 'News', desc: 'Nachrichten, Hintergrundberichte und Kommentare zum Tagesgeschehen.' },
-            { channel: 'Das Erste', title: 'Mischke ermittelt: Tatort Nacht', start: '22:15', end: '23:45', genre: 'Doku', desc: 'Spannende Reportage über nächtliche Polizeieinsätze in deutschen Großstädten.' },
-
-            // ZDF
-            { channel: 'ZDF', title: 'ZDF-Morgenmagazin', start: '06:00', end: '09:00', genre: 'News', desc: 'Informativer Auftakt mit Politik, Sport und Kultur.' },
-            { channel: 'ZDF', title: 'Notruf Hafenkante', start: '10:30', end: '11:15', genre: 'Krimi', desc: 'Polizeiamt und Elbkrankenhaus Hamburg arbeiten Hand in Hand.' },
-            { channel: 'ZDF', title: 'drehscheibe', start: '12:10', end: '13:00', genre: 'Magazin', desc: 'Länderreportagen, Tipps und Geschichten aus den Bundesländern.' },
-            { channel: 'ZDF', title: 'Bares für Rares', start: '15:05', end: '16:00', genre: 'Show', desc: 'Horst Lichter empfängt Menschen, die Raritäten und Kuriositäten verkaufen wollen.' },
-            { channel: 'ZDF', title: 'SOKO Potsdam', start: '18:00', end: '19:00', genre: 'Krimi', desc: 'Das Ermittlerteam löst knifflige Kriminalfälle im Brandenburger Umland.' },
-            { channel: 'ZDF', title: 'heute', start: '19:00', end: '19:25', genre: 'News', desc: 'Nachrichten aus Politik, Wirtschaft, Wissenschaft und Sport.' },
-            { channel: 'ZDF', title: 'Der Bergdoktor', start: '20:15', end: '21:45', genre: 'Drama', desc: 'Dr. Martin Gruber kämpft um das Leben eines jungen Patienten in den Tiroler Alpen.' },
-            { channel: 'ZDF', title: 'heute journal', start: '21:45', end: '22:15', genre: 'News', desc: 'Ausführliche Berichte, Interviews und Analysen zur aktuellen Lage.' },
-            { channel: 'ZDF', title: 'maybrit illner', start: '22:15', end: '23:15', genre: 'Talk', desc: 'Politischer Talk mit hochkarätigen Gästen zu aktuellen Kontroversen.' },
-
-            // RTL
-            { channel: 'RTL', title: 'Punkt 6', start: '06:00', end: '08:30', genre: 'News', desc: 'Das Frühmagazin mit allen relevanten Themen des Morgens.' },
-            { channel: 'RTL', title: 'Gute Zeiten, schlechte Zeiten (Wdh.)', start: '08:30', end: '09:00', genre: 'Serie', desc: 'Die neusten Verstrickungen der Berliner Kiez-Klique.' },
-            { channel: 'RTL', title: 'Punkt 12', start: '12:00', end: '15:00', genre: 'Magazin', desc: 'Das dreistündige Mittagsmagazin mit Verbrauchertipps und Lifestyle.' },
-            { channel: 'RTL', title: 'Unter uns', start: '17:30', end: '18:00', genre: 'Serie', desc: 'Geschichten aus der Schillerallee in Köln.' },
-            { channel: 'RTL', title: 'RTL Aktuell', start: '18:45', end: '19:05', genre: 'News', desc: 'Verlässliche Nachrichten komprimiert auf den Punkt.' },
-            { channel: 'RTL', title: 'Gute Zeiten, schlechte Zeiten', start: '19:40', end: '20:15', genre: 'Serie', desc: 'Deutschlands erfolgreichste Daily-Soap.' },
-            { channel: 'RTL', title: 'Wer wird Millionär?', start: '20:15', end: '23:15', genre: 'Quiz', desc: 'Günther Jauch fordert seine Kandidaten mit kniffligen Fragen heraus.' },
-            { channel: 'RTL', title: 'RTL Direkt', start: '22:15', end: '22:35', genre: 'News', desc: 'Kompakte News und Haltung mitten in der Primetime.' },
-
-            // ProSieben
-            { channel: 'ProSieben', title: 'The Big Bang Theory', start: '07:00', end: '09:00', genre: 'Comedy', desc: 'Nerd-Humor rund um Sheldon, Leonard, Penny und Co.' },
-            { channel: 'ProSieben', title: 'Two and a Half Men', start: '12:00', end: '14:00', genre: 'Comedy', desc: 'Kult-Sitcom aus Malibu.' },
-            { channel: 'ProSieben', title: 'taff', start: '17:00', end: '18:00', genre: 'Magazin', desc: 'Das Boulevardmagazin mit den Trends von morgen.' },
-            { channel: 'ProSieben', title: 'Galileo', start: '19:05', end: '20:15', genre: 'Doku', desc: 'Wissen verständlich und unterhaltsam erklärt.' },
-            { channel: 'ProSieben', title: 'The Masked Singer', start: '20:15', end: '23:30', genre: 'Show', desc: 'Prominente singen unter riesigen Kostümen. Wer wird enthüllt?' },
-            { channel: 'ProSieben', title: 'Late Night Berlin', start: '23:30', end: '00:30', genre: 'Comedy', desc: 'Klaas Heufer-Umlauf serviert Popkultur, Lacher und tolle Musikgäste.' },
-
-            // Sat.1
-            { channel: 'Sat.1', title: 'Sat.1-Frühstücksfernsehen', start: '05:30', end: '10:00', genre: 'Show', desc: 'Gute Laune, News und Talk am frühen Morgen.' },
-            { channel: 'Sat.1', title: 'Klinik am Südring', start: '15:00', end: '17:00', genre: 'Doku-Soap', desc: 'Echte Ärzte und emotionale Schicksale im Krankenhaus.' },
-            { channel: 'Sat.1', title: 'Die Ruhrpottwache', start: '18:00', end: '19:00', genre: 'Doku-Soap', desc: 'Polizeialltag in Duisburg.' },
-            { channel: 'Sat.1', title: 'Sat.1 Nachrichten', start: '19:55', end: '20:15', genre: 'News', desc: 'Das Wichtigste vom Tag.' },
-            { channel: 'Sat.1', title: 'Das große Backen', start: '20:15', end: '22:45', genre: 'Show', desc: 'Hobbybäcker zaubern fantastische Torten-Kreationen.' },
-
-            // VOX
-            { channel: 'VOX', title: 'CSI: Miami', start: '09:00', end: '12:00', genre: 'Krimi', desc: 'Horatio Caine ermittelt im sonnigen Florida.' },
-            { channel: 'VOX', title: 'Shopping Queen', start: '15:00', end: '16:00', genre: 'Show', desc: 'Guido Maria Kretschmer bewertet das beste Outfit der Woche.' },
-            { channel: 'VOX', title: 'Das perfekte Dinner', start: '19:00', end: '20:15', genre: 'Show', desc: 'Fünf Hobbyköche treten im kulinarischen Wettstreit gegeneinander an.' },
-            { channel: 'VOX', title: 'Die Höhle der Löwen', start: '20:15', end: '23:00', genre: 'Show', desc: 'Spannende Start-up-Ideen kämpfen um das Kapital der Investoren.' },
-
-            // Kabel Eins
-            { channel: 'Kabel Eins', title: 'Mein Lokal, Dein Lokal', start: '17:55', end: '18:55', genre: 'Show', desc: 'Fünf Gastronomen testen sich gegenseitig.' },
-            { channel: 'Kabel Eins', title: 'Achtung Kontrolle!', start: '18:55', end: '20:15', genre: 'Doku', desc: 'Einsatzkräfte im Arbeitsalltag.' },
-            { channel: 'Kabel Eins', title: 'Matrix Resurrections', start: '20:15', end: '23:00', genre: 'Film', desc: 'Neo muss erneut wählen, ob er der Kaninchenspur folgt.' },
-
-            // Arte
-            { channel: 'Arte', title: 'Arte Journal', start: '19:20', end: '19:40', genre: 'News', desc: 'Europäische Perspektiven auf das Weltgeschehen.' },
-            { channel: 'Arte', title: 'Faszination Erde: Island', start: '20:15', end: '21:10', genre: 'Doku', desc: 'Atemberaubende Naturaufnahmen von Vulkanen und Geysiren.' },
-            { channel: 'Arte', title: 'Klassik im Quadrat', start: '22:00', end: '23:15', genre: 'Kultur', desc: 'Ein meisterhaftes Symphoniekonzert live aus Paris.' },
-
-            // ZDFneo
-            { channel: 'ZDFneo', title: 'Bares für Rares (Wdh.)', start: '18:30', end: '19:20', genre: 'Show', desc: 'Antiquitäten und Sammlerstücke.' },
-            { channel: 'ZDFneo', title: 'Inspector Barnaby', start: '20:15', end: '21:45', genre: 'Krimi', desc: 'Mordfälle im malerischen Midsomer.' },
-            { channel: 'ZDFneo', title: 'ZDF Magazin Royale', start: '22:00', end: '22:45', genre: 'Comedy', desc: 'Jan Böhmermann entlarvt Missstände mit scharfer Satire.' }
+        // Exakte TV Spielfilm Reihenfolge
+        const channelOrder = [
+            'Das Erste', 
+            'ZDF', 
+            'RTL', 
+            'Sat.1', 
+            'ProSieben', 
+            'Kabel Eins', 
+            'RTLZWEI', 
+            'VOX', 
+            '3sat', 
+            'Arte'
         ];
 
-        let currentFilter = 'jetzt';
+        // Generiere die Sender-Buttons im HTML basierend auf dem Array
+        const channelScroll = document.getElementById('channelScroll');
+        channelOrder.forEach(channel => {
+            const btn = document.createElement('button');
+            btn.className = 'channel-btn';
+            btn.innerText = channel;
+            btn.onclick = function() { setChannelFilter(channel, this); };
+            channelScroll.appendChild(btn);
+        });
 
-        // Echtzeit-Uhr
+        // Mock-Daten, erweitert um RTLZWEI und 3sat, angepasst für 24h Übersicht
+        const fullDaySchedule = [
+            // Das Erste
+            { channel: 'Das Erste', title: 'Brisant', start: '17:15', end: '18:00', desc: 'Boulevard- und Promimagazin mit aktuellen News aus aller Welt.' },
+            { channel: 'Das Erste', title: 'Wer weiß denn sowas?', start: '18:00', end: '18:50', desc: 'Kai Pflaume moderiert das schlaue Wissensspiel.' },
+            { channel: 'Das Erste', title: 'Tagesschau', start: '20:00', end: '20:15', desc: 'Die wichtigsten Nachrichten des Tages.' },
+            { channel: 'Das Erste', title: 'Tatort: Dunkle Wege', start: '20:15', end: '21:45', desc: 'Die Kommissare Batic und Leitmayr ermitteln in einem mysteriösen Mordfall.' },
+            { channel: 'Das Erste', title: 'Tagesthemen', start: '21:45', end: '22:15', desc: 'Nachrichten, Hintergrundberichte und Kommentare.' },
+            { channel: 'Das Erste', title: 'Polizeiruf 110', start: '22:15', end: '23:45', desc: 'Spannender Krimi aus Rostock.' },
+
+            // ZDF
+            { channel: 'ZDF', title: 'SOKO Leipzig', start: '18:00', end: '19:00', desc: 'Ermittlungsarbeit in Sachsen.' },
+            { channel: 'ZDF', title: 'heute', start: '19:00', end: '19:25', desc: 'Nachrichten.' },
+            { channel: 'ZDF', title: 'Der Bergdoktor', start: '20:15', end: '21:45', desc: 'Dr. Martin Gruber steht vor einer schweren medizinischen Entscheidung.' },
+            { channel: 'ZDF', title: 'heute journal', start: '21:45', end: '22:15', desc: 'Ausführliche Berichte und Analysen.' },
+            { channel: 'ZDF', title: 'maybrit illner', start: '22:15', end: '23:15', desc: 'Politischer Talk mit hochkarätigen Gästen.' },
+
+            // RTL
+            { channel: 'RTL', title: 'RTL Aktuell', start: '18:45', end: '19:05', desc: 'Nachrichten.' },
+            { channel: 'RTL', title: 'Gute Zeiten, schlechte Zeiten', start: '19:40', end: '20:15', desc: 'Deutschlands erfolgreichste Daily-Soap.' },
+            { channel: 'RTL', title: 'Wer wird Millionär?', start: '20:15', end: '22:15', desc: 'Quizshow mit Günther Jauch.' },
+            { channel: 'RTL', title: 'RTL Direkt', start: '22:15', end: '22:35', desc: 'Kompakte News am späten Abend.' },
+
+            // Sat.1
+            { channel: 'Sat.1', title: 'Die Ruhrpottwache', start: '18:00', end: '19:55', desc: 'Polizeialltag in Duisburg.' },
+            { channel: 'Sat.1', title: 'Sat.1 Nachrichten', start: '19:55', end: '20:15', desc: 'News des Tages.' },
+            { channel: 'Sat.1', title: 'The Voice of Germany', start: '20:15', end: '23:00', desc: 'Blind Auditions: Die Suche nach der besten Stimme.' },
+
+            // ProSieben
+            { channel: 'ProSieben', title: 'taff', start: '17:00', end: '18:00', desc: 'Boulevardmagazin.' },
+            { channel: 'ProSieben', title: 'Galileo', start: '19:05', end: '20:15', desc: 'Wissen verständlich und unterhaltsam erklärt.' },
+            { channel: 'ProSieben', title: 'The Masked Singer', start: '20:15', end: '23:30', desc: 'Wer steckt unter den Masken? Das Musik-Rätsel.' },
+
+            // Kabel Eins
+            { channel: 'Kabel Eins', title: 'Mein Lokal, Dein Lokal', start: '17:55', end: '18:55', desc: 'Gastronomen im Wettstreit.' },
+            { channel: 'Kabel Eins', title: 'Achtung Kontrolle!', start: '18:55', end: '20:15', desc: 'Einsatzkräfte im Arbeitsalltag.' },
+            { channel: 'Kabel Eins', title: 'Matrix', start: '20:15', end: '23:00', desc: 'Sci-Fi Klassiker mit Keanu Reeves.' },
+
+            // RTLZWEI
+            { channel: 'RTLZWEI', title: 'Köln 50667', start: '18:05', end: '19:05', desc: 'Geschichten aus der Domstadt.' },
+            { channel: 'RTLZWEI', title: 'Berlin - Tag & Nacht', start: '19:05', end: '20:15', desc: 'Der Alltag in der angesagten Hauptstadt-WG.' },
+            { channel: 'RTLZWEI', title: 'Frauentausch', start: '20:15', end: '22:15', desc: 'Zwei Frauen tauschen für zehn Tage ihre Familien.' },
+
+            // VOX
+            { channel: 'VOX', title: 'First Dates', start: '18:00', end: '19:00', desc: 'Roland Trettl öffnet sein Restaurant für Singles.' },
+            { channel: 'VOX', title: 'Das perfekte Dinner', start: '19:00', end: '20:15', desc: 'Fünf Hobbyköche treten gegeneinander an.' },
+            { channel: 'VOX', title: 'Die Höhle der Löwen', start: '20:15', end: '23:00', desc: 'Start-ups pitchen vor knallharten Investoren.' },
+
+            // 3sat
+            { channel: '3sat', title: 'nano', start: '18:30', end: '19:00', desc: 'Das Zukunftsmagazin.' },
+            { channel: '3sat', title: 'Kulturzeit', start: '19:20', end: '20:00', desc: 'Das werktägliche Kulturmagazin.' },
+            { channel: '3sat', title: 'Wissenschaftsdoku', start: '20:15', end: '21:00', desc: 'Tiefe Einblicke in Forschung und Technik.' },
+
+            // Arte
+            { channel: 'Arte', title: 'Arte Journal', start: '19:20', end: '19:40', desc: 'Europäische Perspektiven.' },
+            { channel: 'Arte', title: 'Faszination Erde', start: '20:15', end: '21:45', desc: 'Naturdoku über die Landschaften Islands.' }
+        ];
+
+        // State
+        let activeTimeFilter = 'jetzt';
+        let activeChannel = 'all';
+
+        // Uhrzeit aktualisieren
         function updateClock() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('de-DE');
+            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             document.getElementById('clock').innerText = timeStr + ' Uhr';
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Zeit in Minuten umrechnen (z.B. "20:15" -> 1215)
+        // Helfer: "HH:MM" zu Minuten seit 00:00
         function timeToMinutes(str) {
-            if(!str) return 0;
             const [h, m] = str.split(':').map(Number);
             return h * 60 + m;
         }
 
-        // Aktuelle Zeit in Minuten
         function getCurrentMinutes() {
             const now = new Date();
             return now.getHours() * 60 + now.getMinutes();
         }
 
-        // Filter setzen
-        function setFilter(type, btn) {
-            currentFilter = type;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        // Filter Controls
+        function setTimeFilter(type, btn) {
+            activeTimeFilter = type;
+            document.querySelectorAll('.time-filters .filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             applyFilters();
         }
 
-        // Haupt-Render und Filter-Funktion
+        function setChannelFilter(channel, btn) {
+            activeChannel = channel;
+            document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilters();
+        }
+
+        // Hauptlogik: Filtern und Sortieren
         function applyFilters() {
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
-            const channelVal = document.getElementById('channelSelect').value;
             const titleEl = document.getElementById('sectionTitle');
             const nowMins = getCurrentMinutes();
+            
+            let result = [...fullDaySchedule];
 
-            let result = fullDaySchedule;
-
-            // 1. Sender-Filter
-            if (channelVal !== 'all') {
-                result = result.filter(s => s.channel === channelVal);
-            }
-
-            // 2. Zeit-Filter
-            if (currentFilter === 'jetzt') {
-                titleEl.innerText = "Das läuft aktuell (Live)";
+            // 1. Zeit filtern
+            if (activeTimeFilter === 'jetzt') {
+                titleEl.innerText = "Jetzt Live";
                 result = result.filter(s => {
-                    const startM = timeToMinutes(s.start);
-                    const endM = timeToMinutes(s.end);
-                    return nowMins >= startM && nowMins < endM;
+                    const start = timeToMinutes(s.start);
+                    const end = timeToMinutes(s.end);
+                    return nowMins >= start && nowMins < end;
                 });
-            } else if (currentFilter === 'morgen') {
-                titleEl.innerText = "Programm Morgens (06:00 - 12:00 Uhr)";
-                result = result.filter(s => timeToMinutes(s.start) >= 360 && timeToMinutes(s.start) < 720);
-            } else if (currentFilter === 'nachmittag') {
-                titleEl.innerText = "Programm Nachmittags (12:00 - 18:00 Uhr)";
-                result = result.filter(s => timeToMinutes(s.start) >= 720 && timeToMinutes(s.start) < 1080);
-            } else if (currentFilter === '2015') {
+            } else if (activeTimeFilter === '2015') {
                 titleEl.innerText = "Prime-Time (20:15 Uhr)";
                 result = result.filter(s => s.start === '20:15');
-            } else if (currentFilter === '2200') {
+            } else if (activeTimeFilter === '2200') {
                 titleEl.innerText = "Spätprogramm (ab 22:00 Uhr)";
-                result = result.filter(s => timeToMinutes(s.start) >= 1320);
-            } else if (currentFilter === 'ganzer-tag') {
+                result = result.filter(s => timeToMinutes(s.start) >= 1320); // 22:00 = 1320 mins
+            } else {
                 titleEl.innerText = "Gesamtes Tagesprogramm";
-                // Nach Startzeit sortieren
-                result.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
             }
 
-            // 3. Suche
+            // 2. Sender filtern
+            if (activeChannel !== 'all') {
+                result = result.filter(s => s.channel === activeChannel);
+            }
+
+            // 3. Text Suche (Titel oder Sender)
             if (searchVal.trim() !== '') {
                 result = result.filter(s => 
                     s.title.toLowerCase().includes(searchVal) || 
-                    s.desc.toLowerCase().includes(searchVal) ||
-                    s.channel.toLowerCase().includes(searchVal) ||
-                    s.genre.toLowerCase().includes(searchVal)
+                    s.channel.toLowerCase().includes(searchVal)
                 );
             }
+
+            // 4. Sortieren (Immer nach TV Spielfilm Logik)
+            result.sort((a, b) => {
+                // Wenn "Ganzer Tag" aktiv ist, sortiere zuerst nach Uhrzeit
+                if (activeTimeFilter === 'ganzer-tag') {
+                    const timeDiff = timeToMinutes(a.start) - timeToMinutes(b.start);
+                    if (timeDiff !== 0) return timeDiff;
+                }
+                
+                // Danach (oder primär) nach TV Spielfilm Hierarchie sortieren
+                const indexA = channelOrder.indexOf(a.channel);
+                const indexB = channelOrder.indexOf(b.channel);
+                
+                // Fallback, falls ein Sender nicht in der Liste ist (nach hinten schieben)
+                const rankA = indexA !== -1 ? indexA : 999;
+                const rankB = indexB !== -1 ? indexB : 999;
+                
+                return rankA - rankB;
+            });
 
             renderGrid(result);
         }
 
+        // HTML Rendern
         function renderGrid(shows) {
             const grid = document.getElementById('tvGrid');
             const countEl = document.getElementById('showCount');
@@ -558,8 +572,7 @@
             if (shows.length === 0) {
                 grid.innerHTML = `
                     <div class="no-results">
-                        <h3>Keine Sendungen gefunden</h3>
-                        <p style="margin-top:0.5rem">Versuche die Suche oder den Zeitfilter zurückzusetzen.</p>
+                        Keine passenden Sendungen gefunden.
                     </div>`;
                 return;
             }
@@ -567,58 +580,45 @@
             shows.forEach(show => {
                 const startM = timeToMinutes(show.start);
                 const endM = timeToMinutes(show.end);
-                const isLive = nowMins >= startM && nowMins < endM;
+                const isLive = (nowMins >= startM && nowMins < endM);
                 
-                // Live Fortschritt berechnen
-                let progressPercent = 0;
+                let progressHTML = '';
+                
                 if (isLive) {
                     const totalDuration = endM - startM;
                     const elapsed = nowMins - startM;
-                    progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
-                }
-
-                const badgeHTML = isLive 
-                    ? `<span class="genre-badge live">● LIVE (${progressPercent}%)</span>` 
-                    : `<span class="genre-badge">${show.genre}</span>`;
-
-                const progressHTML = isLive ? `
-                    <div class="card-footer">
-                        <div class="progress-wrapper">
-                            <div class="progress-labels">
-                                <span>Fortschritt</span>
+                    const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
+                    
+                    progressHTML = `
+                        <div class="progress-container">
+                            <div class="progress-text">
+                                <span class="live-indicator"><div class="live-dot"></div> Live</span>
                                 <span>${progressPercent}%</span>
                             </div>
                             <div class="progress-bar-bg">
                                 <div class="progress-bar-fill" style="width: ${progressPercent}%"></div>
                             </div>
                         </div>
-                    </div>` : '';
+                    `;
+                }
 
                 const cardHTML = `
                     <div class="card">
                         <div class="card-header">
-                            <div class="channel-info">
-                                <div class="channel-dot"></div>
-                                <span class="channel-name">${show.channel}</span>
-                            </div>
-                            ${badgeHTML}
+                            <span class="channel-name">${show.channel}</span>
+                            <span class="time-badge">${show.start} - ${show.end}</span>
                         </div>
-                        <div class="card-body">
-                            <div class="show-time">🕒 ${show.start} - ${show.end} Uhr</div>
-                            <div class="show-title">${show.title}</div>
-                            <div class="show-desc">${show.desc}</div>
-                            ${progressHTML}
-                        </div>
+                        <div class="show-title">${show.title}</div>
+                        <div class="show-desc">${show.desc}</div>
+                        ${progressHTML}
                     </div>
                 `;
                 grid.innerHTML += cardHTML;
             });
         }
 
-        // Beim ersten Start ausführen
-        window.onload = () => {
-            applyFilters();
-        };
+        // Init
+        window.onload = applyFilters;
     </script>
 </body>
 </html>
