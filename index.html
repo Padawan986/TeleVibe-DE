@@ -123,7 +123,6 @@
             font-weight: 600;
         }
 
-        /* Channel Buttons (Rund) */
         .btn-channel {
             border-radius: 99px;
             padding: 0.4rem 1.2rem;
@@ -183,6 +182,41 @@
             gap: 1.25rem;
         }
 
+        /* Spezial-Layout für "Ganzer Tag" (Timeline-Style) */
+        .tv-grid.timeline-mode {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .tv-grid.timeline-mode .card {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            gap: 1rem;
+        }
+
+        .tv-grid.timeline-mode .card-header {
+            margin-bottom: 0;
+            flex-direction: column;
+            align-items: flex-start;
+            min-width: 120px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .tv-grid.timeline-mode .card-body-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .tv-grid.timeline-mode .show-desc {
+            margin-bottom: 0;
+            -webkit-line-clamp: 1; /* Nur 1 Zeile Beschreibung in der Timeline */
+        }
+
         /* --- CARDS --- */
         .card {
             background: var(--bg-card);
@@ -195,7 +229,7 @@
         }
 
         .card:hover {
-            transform: translateY(-3px);
+            transform: translateY(-2px);
             border-color: var(--primary);
         }
 
@@ -225,7 +259,7 @@
         .show-title {
             font-size: 1.15rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
             line-height: 1.3;
         }
 
@@ -238,11 +272,9 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
             margin-bottom: 1rem;
-            flex-grow: 1;
         }
 
-        /* Live Indicator */
-        .progress-container { margin-top: auto; }
+        .progress-container { margin-top: auto; width: 100%; }
         
         .progress-text {
             font-size: 0.8rem;
@@ -297,6 +329,18 @@
             border: 1px dashed var(--border);
             font-size: 1.1rem;
         }
+
+        @media (max-width: 768px) {
+            .tv-grid.timeline-mode .card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .tv-grid.timeline-mode .card-header {
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 <body>
@@ -307,27 +351,21 @@
     </header>
 
     <div class="controls-wrapper">
-        
-        <!-- 1. Datums-Wähler (Generiert für die nächsten 5 Tage) -->
         <div class="scroll-row" id="dateScroll">
             <span class="row-label">Datum:</span>
-            <!-- Buttons werden via JS injiziert -->
         </div>
 
-        <!-- 2. Zeit-Filter -->
         <div class="scroll-row" id="timeScroll">
             <span class="row-label">Zeit:</span>
-            <button class="btn active" id="btn-jetzt" onclick="setTimeFilter('jetzt', this)">🔴 Jetzt Live</button>
+            <button class="btn active" onclick="setTimeFilter('jetzt', this)">🔴 Jetzt Live</button>
             <button class="btn" onclick="setTimeFilter('2015', this)">20:15 Uhr</button>
             <button class="btn" onclick="setTimeFilter('2200', this)">22:00 Uhr</button>
-            <button class="btn" onclick="setTimeFilter('ganzer-tag', this)">Ganzer Tag (00:00 - 24:00)</button>
+            <button class="btn" onclick="setTimeFilter('ganzer-tag', this)">Ganzer Tag</button>
         </div>
 
-        <!-- 3. Sender-Wähler -->
         <div class="scroll-row" id="channelScroll">
             <span class="row-label">Sender:</span>
             <button class="btn btn-channel active" onclick="setChannelFilter('all', this)">Alle 20 Sender</button>
-            <!-- Sender werden via JS injiziert -->
         </div>
         
         <input type="text" id="searchInput" class="search-input" placeholder="Nach Sendung oder Sender suchen..." oninput="applyFilters()">
@@ -342,13 +380,11 @@
     </main>
 
     <script>
-        // --- 1. KONFIGURATION & DATEN ---
         const channelOrder = [
             'Das Erste', 'ZDF', 'RTL', 'Sat.1', 'ProSieben', 'Kabel Eins', 'RTLZWEI', 'VOX', '3sat', 'Arte',
             'n-tv', 'WELT', 'DMAX', 'NITRO', 'ZDFneo', 'Sixx', 'Super RTL', 'KiKA', 'Phoenix', 'Tele 5'
         ];
 
-        // Lückenloses 24h Zeitraster für den Algorithmus
         const timeSlots = [
             { start: '00:00', end: '05:30', type: 'night' },
             { start: '05:30', end: '10:00', type: 'morning' },
@@ -359,15 +395,12 @@
             { start: '22:15', end: '23:59', type: 'late' }
         ];
 
-        // State
-        let activeDateOffset = 0; // 0 = Heute, 1 = Morgen etc.
+        let activeDateOffset = 0;
         let activeTimeFilter = 'jetzt';
         let activeChannel = 'all';
-        let fullDatabase = []; // Speichert alle generierten Daten
+        let fullDatabase = [];
 
-        // --- 2. INITIALISIERUNG DER UI ---
         function initUI() {
-            // Sender-Buttons
             const cScroll = document.getElementById('channelScroll');
             channelOrder.forEach(channel => {
                 const btn = document.createElement('button');
@@ -377,7 +410,6 @@
                 cScroll.appendChild(btn);
             });
 
-            // Datums-Buttons (Heute + 4 Tage)
             const dScroll = document.getElementById('dateScroll');
             const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
             
@@ -403,11 +435,8 @@
             }
         }
 
-        // --- 3. DATEN-GENERATOR (Echter 24h Algorithmus) ---
-        // Generiert lückenlose Daten für JEDEN Sender und JEDEN Tag
         function generateDatabase() {
             fullDatabase = [];
-            
             for(let dayOffset=0; dayOffset<5; dayOffset++) {
                 channelOrder.forEach(channel => {
                     timeSlots.forEach(slot => {
@@ -424,20 +453,16 @@
             }
         }
 
-        // Simuliert realistische Sendungsnamen je nach Sender und Tageszeit
         function getShowTitle(channel, type) {
             const rules = {
                 'Das Erste': { prime: 'Tatort', evening: 'Sportschau / Quiz', late: 'Tagesthemen', morning: 'Morgenmagazin' },
                 'ZDF': { prime: 'Der Bergdoktor / Krimi', evening: 'SOKO / heute', late: 'heute journal', morning: 'ZDF-Morgenmagazin' },
-                'RTL': { prime: 'Wer wird Millionär? / Show', evening: 'GZSZ / RTL Aktuell', late: 'RTL Direkt', morning: 'Punkt 6' },
+                'RTL': { prime: 'Wer wird Millionär?', evening: 'GZSZ / RTL Aktuell', late: 'RTL Direkt', morning: 'Punkt 6' },
                 'ProSieben': { prime: 'Blockbuster / Masked Singer', evening: 'Galileo / taff', late: 'Late Night Berlin', morning: 'Sitcoms' },
                 'Sat.1': { prime: 'The Voice / Film', evening: 'Sat.1 Nachrichten', late: 'Reportage', morning: 'Frühstücksfernsehen' },
-                'VOX': { prime: 'Die Höhle der Löwen / Film', evening: 'Das perfekte Dinner', late: 'Doku', morning: 'CSI: Miami' },
-                'n-tv': { prime: 'Wissen & Technik Doku', evening: 'Nachrichten', late: 'Weltgeschehen', morning: 'Telebörse' },
-                'DMAX': { prime: 'Goldrausch in Alaska', evening: 'Steel Buddies', late: 'Survival Doku', morning: 'Motor-Dokus' },
+                'VOX': { prime: 'Die Höhle der Löwen', evening: 'Das perfekte Dinner', late: 'Doku', morning: 'CSI: Miami' }
             };
 
-            // Standard-Fallback für Sender ohne spezielle Regeln
             const fallback = {
                 night: 'Nachtprogramm / Wiederholungen',
                 morning: 'Frühprogramm / Dokumentationen',
@@ -453,13 +478,11 @@
         }
 
         function getShowDesc(channel, type) {
-            if(type === 'prime') return 'Das Highlight zur besten Sendezeit. Beste Unterhaltung garantiert.';
+            if(type === 'prime') return 'Das Highlight zur besten Sendezeit.';
             if(type === 'late') return 'Spannende Themen und Hintergründe am späten Abend.';
-            if(type === 'night') return 'Das lückenlose Programm für Nachteulen.';
             return `Reguläres Programm auf ${channel}.`;
         }
 
-        // --- 4. HILFSFUNKTIONEN ---
         function timeToMinutes(str) {
             const [h, m] = str.split(':').map(Number);
             return h * 60 + m;
@@ -476,13 +499,10 @@
         }
         setInterval(updateClock, 1000);
 
-        // --- 5. FILTER-LOGIK ---
         function setDateFilter(offset, btn) {
             activeDateOffset = offset;
             document.querySelectorAll('#dateScroll .btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
-            // Wenn in der Zukunft, deaktiviere "Jetzt", setze auf "20:15"
             if(offset > 0 && activeTimeFilter === 'jetzt') {
                 setTimeFilter('2015', document.querySelectorAll('#timeScroll .btn')[1]);
             } else {
@@ -494,8 +514,6 @@
             activeTimeFilter = type;
             document.querySelectorAll('#timeScroll .btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
-            // Wenn "Jetzt" gedrückt wird, zwinge Datum zurück auf "Heute"
             if(type === 'jetzt' && activeDateOffset > 0) {
                 setDateFilter(0, document.querySelectorAll('#dateScroll .btn')[0]);
             } else {
@@ -515,14 +533,10 @@
             const titleEl = document.getElementById('sectionTitle');
             const nowMins = getCurrentMinutes();
             
-            // 1. Datum filtern
             let result = fullDatabase.filter(s => s.dayOffset === activeDateOffset);
-
-            // Titel generieren
             const dateLabels = ['Heute', 'Morgen', 'Übermorgen', 'in 3 Tagen', 'in 4 Tagen'];
             let titlePrefix = dateLabels[activeDateOffset];
 
-            // 2. Zeit filtern
             if (activeTimeFilter === 'jetzt') {
                 titleEl.innerText = "🔴 Jetzt Live im TV";
                 result = result.filter(s => {
@@ -530,27 +544,20 @@
                     const end = timeToMinutes(s.end);
                     return nowMins >= start && nowMins < end;
                 });
-            } 
-            else if (activeTimeFilter === '2015') {
+            } else if (activeTimeFilter === '2015') {
                 titleEl.innerText = `${titlePrefix}: Prime-Time (20:15 Uhr)`;
-                // Finde Sendungen, die 20:15 abdecken (Start <= 20:15 und End > 20:15)
                 result = result.filter(s => timeToMinutes(s.start) <= 1215 && timeToMinutes(s.end) > 1215);
-            } 
-            else if (activeTimeFilter === '2200') {
+            } else if (activeTimeFilter === '2200') {
                 titleEl.innerText = `${titlePrefix}: Spätprogramm (22:00 Uhr)`;
-                // Finde Sendungen, die 22:00 (1320 min) abdecken
                 result = result.filter(s => timeToMinutes(s.start) <= 1320 && timeToMinutes(s.end) > 1320);
-            } 
-            else if (activeTimeFilter === 'ganzer-tag') {
+            } else if (activeTimeFilter === 'ganzer-tag') {
                 titleEl.innerText = `${titlePrefix}: Komplettes 24h-Programm`;
             }
 
-            // 3. Sender filtern
             if (activeChannel !== 'all') {
                 result = result.filter(s => s.channel === activeChannel);
             }
 
-            // 4. Suche (Titel & Sender)
             if (searchVal.trim() !== '') {
                 result = result.filter(s => 
                     s.title.toLowerCase().includes(searchVal) || 
@@ -558,21 +565,17 @@
                 );
             }
 
-            // 5. Sortieren
             result.sort((a, b) => {
-                // Bei Ganzer Tag chronologisch sortieren
                 if (activeTimeFilter === 'ganzer-tag') {
                     const timeDiff = timeToMinutes(a.start) - timeToMinutes(b.start);
                     if (timeDiff !== 0) return timeDiff;
                 }
-                // Ansonsten nach TV Spielfilm Rang
                 return channelOrder.indexOf(a.channel) - channelOrder.indexOf(b.channel);
             });
 
             renderGrid(result);
         }
 
-        // --- 6. RENDER ENGINE ---
         function renderGrid(shows) {
             const grid = document.getElementById('tvGrid');
             const countEl = document.getElementById('showCount');
@@ -580,6 +583,13 @@
             
             grid.innerHTML = '';
             countEl.innerText = `${shows.length} Sendung(en)`;
+
+            // Schaltet automatisch den sauberen Listen-/Timeline-Modus ein, wenn "Ganzer Tag" gewählt ist
+            if (activeTimeFilter === 'ganzer-tag') {
+                grid.classList.add('timeline-mode');
+            } else {
+                grid.classList.remove('timeline-mode');
+            }
 
             if (shows.length === 0) {
                 grid.innerHTML = `<div class="no-results">Für diese Kombination wurden keine Sendungen gefunden.</div>`;
@@ -592,8 +602,7 @@
                 const isLive = (activeDateOffset === 0 && nowMins >= startM && nowMins < endM);
                 
                 let progressHTML = '';
-                
-                if (isLive) {
+                if (isLive && activeTimeFilter !== 'ganzer-tag') {
                     const totalDuration = endM - startM;
                     const elapsed = nowMins - startM;
                     const progressPercent = Math.min(100, Math.max(0, Math.round((elapsed / totalDuration) * 100)));
@@ -611,22 +620,39 @@
                     `;
                 }
 
-                const cardHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="channel-name">${show.channel}</span>
-                            <span class="time-badge">${show.start} - ${show.end}</span>
+                if (activeTimeFilter === 'ganzer-tag') {
+                    // Kompakte Timeline-Ansicht für den ganzen Tag
+                    const cardHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="channel-name">${show.channel}</span>
+                                <span class="time-badge">${show.start} - ${show.end}</span>
+                            </div>
+                            <div class="card-body-wrapper">
+                                <div class="show-title" style="font-size: 1.05rem; margin-bottom: 0.1rem;">${show.title}</div>
+                                <div class="show-desc">${show.desc}</div>
+                            </div>
                         </div>
-                        <div class="show-title">${show.title}</div>
-                        <div class="show-desc">${show.desc}</div>
-                        ${progressHTML}
-                    </div>
-                `;
-                grid.innerHTML += cardHTML;
+                    `;
+                    grid.innerHTML += cardHTML;
+                } else {
+                    // Normale Grid-Karten für andere Ansichten
+                    const cardHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="channel-name">${show.channel}</span>
+                                <span class="time-badge">${show.start} - ${show.end}</span>
+                            </div>
+                            <div class="show-title">${show.title}</div>
+                            <div class="show-desc">${show.desc}</div>
+                            ${progressHTML}
+                        </div>
+                    `;
+                    grid.innerHTML += cardHTML;
+                }
             });
         }
 
-        // --- 7. START ---
         window.onload = () => {
             initUI();
             generateDatabase();
