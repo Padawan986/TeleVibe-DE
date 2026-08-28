@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeleVibe DE | Dein TV-Programm</title>
+    <title>TeleVibe DE | Echtes TV-Programm (API)</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a; /* Tiefdunkles Blau für modernen Look */
+            --bg-color: #0f172a;
             --card-bg: #1e293b;
-            --primary: #3b82f6; /* Modernes Blau als Akzent */
+            --primary: #3b82f6;
             --primary-hover: #2563eb;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
@@ -29,7 +29,7 @@
             min-height: 100vh;
         }
 
-        /* --- HEADER & NAVIGATION --- */
+        /* --- HEADER --- */
         header {
             background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(12px);
@@ -81,7 +81,7 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
-        /* --- MAIN CONTENT & GRID --- */
+        /* --- CONTENT --- */
         main {
             padding: 2rem 5%;
             max-width: 1400px;
@@ -93,6 +93,15 @@
             font-weight: 600;
             margin-bottom: 1.5rem;
             color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .loader {
+            font-size: 1rem;
+            color: var(--primary);
+            display: none;
         }
 
         .tv-grid {
@@ -101,14 +110,15 @@
             gap: 1.5rem;
         }
 
-        /* --- TV CARDS --- */
+        /* --- CARDS --- */
         .card {
             background: var(--card-bg);
             border-radius: 16px;
             border: 1px solid var(--border);
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         .card:hover {
@@ -127,27 +137,23 @@
 
         .channel-name {
             font-weight: 700;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: var(--text-main);
         }
 
         .badge {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--primary);
+            background: rgba(139, 92, 246, 0.2);
+            color: #c084fc;
             padding: 0.3rem 0.6rem;
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
         }
 
-        .badge.live {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
         .card-body {
             padding: 1.5rem;
+            flex-grow: 1;
         }
 
         .show-time {
@@ -158,39 +164,39 @@
         }
 
         .show-title {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             line-height: 1.3;
+        }
+        
+        .episode-title {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            margin-bottom: 0.8rem;
+            font-style: italic;
         }
 
         .show-desc {
             color: var(--text-muted);
             font-size: 0.9rem;
             line-height: 1.5;
-            margin-bottom: 1.5rem;
-            /* Beschränkung auf 2 Zeilen Text */
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
-        .progress-container {
-            width: 100%;
-            height: 6px;
-            background: var(--border);
-            border-radius: 99px;
-            overflow: hidden;
+        .no-data {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px dashed var(--border);
         }
 
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            border-radius: 99px;
-        }
-
-        /* Responsive */
         @media (max-width: 768px) {
             header {
                 flex-direction: column;
@@ -209,79 +215,113 @@
     <header>
         <div class="logo">TeleVibe DE</div>
         <div class="time-filters">
-            <button class="filter-btn active" onclick="filterProgram('jetzt', this)">Jetzt im TV</button>
+            <button class="filter-btn active" onclick="filterProgram('jetzt', this)">Jetzt / Demnächst</button>
             <button class="filter-btn" onclick="filterProgram('2015', this)">20:15 Uhr</button>
-            <button class="filter-btn" onclick="filterProgram('2200', this)">22:00 Uhr</button>
+            <button class="filter-btn" onclick="filterProgram('2200', this)">Ab 22:00 Uhr</button>
         </div>
     </header>
 
     <main>
-        <h2 class="section-title" id="current-category">Das läuft aktuell (Live)</h2>
+        <h2 class="section-title">
+            <span id="current-category">Das läuft aktuell</span>
+            <span class="loader" id="loader">Lade Daten aus API...</span>
+        </h2>
         <div class="tv-grid" id="tv-grid">
-            </div>
+            <!-- Karten werden via JavaScript geladen -->
+        </div>
     </main>
 
     <script>
-        // Realistische Mock-Daten für deutsche TV-Sender
-        const programData = {
-            'jetzt': [
-                { channel: 'Das Erste', title: 'Tagesschau', time: '20:00 - 20:15', desc: 'Die wichtigsten Nachrichten des Tages aus Deutschland und der Welt.', progress: 75, isLive: true },
-                { channel: 'ZDF', title: 'WISO', time: '19:25 - 20:15', desc: 'Wirtschaft und Soziales - Das Verbrauchermagazin im ZDF.', progress: 85, isLive: true },
-                { channel: 'RTL', title: 'RTL Aktuell', time: '18:45 - 19:05', desc: 'Die neusten Nachrichten aus Politik, Wirtschaft und Gesellschaft.', progress: 100, isLive: false },
-                { channel: 'ProSieben', title: 'Galileo', time: '19:05 - 20:15', desc: 'Das Wissensmagazin mit Aiman Abdallah. Spannende Reportagen und Experimente.', progress: 90, isLive: true },
-                { channel: 'Sat.1', title: 'Sat.1 Nachrichten', time: '19:55 - 20:15', desc: 'Aktuelle News und Hintergründe.', progress: 40, isLive: true },
-                { channel: 'VOX', title: 'Das perfekte Dinner', time: '19:00 - 20:15', desc: 'Hobbyköche laden zum Dreigänge-Menü in ihre eigenen vier Wände ein.', progress: 95, isLive: true }
-            ],
-            '2015': [
-                { channel: 'Das Erste', title: 'Tatort: Dunkle Wege', time: '20:15 - 21:45', desc: 'Die Kommissare Batic und Leitmayr ermitteln in einem mysteriösen Mordfall in der Münchener High-Society.', progress: 0, isLive: false },
-                { channel: 'ZDF', title: 'Der Bergdoktor', time: '20:15 - 21:45', desc: 'Dr. Martin Gruber steht vor einer schweren medizinischen Entscheidung. Emotionale Momente in den Alpen.', progress: 0, isLive: false },
-                { channel: 'RTL', title: 'Wer wird Millionär?', time: '20:15 - 23:00', desc: 'Günther Jauch präsentiert die beliebte Quizshow. Schafft es heute jemand zur Million?', progress: 0, isLive: false },
-                { channel: 'ProSieben', title: 'The Masked Singer', time: '20:15 - 23:30', desc: 'Wer steckt unter den spektakulären Masken? Das größte TV-Rätsel Deutschlands geht weiter.', progress: 0, isLive: false },
-                { channel: 'Sat.1', title: 'Das große Backen', time: '20:15 - 22:30', desc: 'Deutschlands beste Hobbybäcker stellen sich neuen Herausforderungen unter den strengen Augen der Jury.', progress: 0, isLive: false },
-                { channel: 'VOX', title: 'Die Höhle der Löwen', time: '20:15 - 22:45', desc: 'Gründer pitchen ihre innovativen Ideen vor knallharten Investoren, um einen Deal zu ergattern.', progress: 0, isLive: false }
-            ],
-            '2200': [
-                { channel: 'Das Erste', title: 'Tagesthemen', time: '22:15 - 22:45', desc: 'Die wichtigsten Nachrichten des Tages mit Hintergrundberichten und Analysen.', progress: 0, isLive: false },
-                { channel: 'ZDF', title: 'heute journal', time: '21:45 - 22:15', desc: 'Ausführliche Nachrichten und Hintergründe zu den Themen des Tages.', progress: 0, isLive: false },
-                { channel: 'RTL', title: 'RTL Direkt', time: '22:15 - 22:35', desc: 'Das neue Nachrichtenmagazin mit Jan Hofer und Pinar Atalay.', progress: 0, isLive: false },
-                { channel: 'ProSieben', title: 'Late Night Berlin', time: '23:30 - 00:30', desc: 'Klaas Heufer-Umlauf präsentiert die heißesten Themen, coole Gäste und Musik.', progress: 0, isLive: false },
-                { channel: 'Kabel Eins', title: 'Matrix', time: '22:30 - 01:10', desc: 'Sci-Fi-Klassiker: Neo entdeckt, dass die Welt nur eine Computersimulation ist.', progress: 0, isLive: false },
-                { channel: 'ZDFneo', title: 'Böhmermann', time: '22:00 - 22:30', desc: 'ZDF Magazin Royale: Satire, Musik und investigativer Journalismus.', progress: 0, isLive: false }
-            ]
-        };
+        // TVMaze API URL für das deutsche Programm (heute)
+        const API_URL = 'https://api.tvmaze.com/schedule?country=DE';
+        let allShows = []; // Hier speichern wir die geladenen API-Daten
 
-        // Render-Funktion
+        // Daten beim Start laden
+        async function fetchProgramData() {
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block';
+            
+            try {
+                const response = await fetch(API_URL);
+                allShows = await response.json();
+                
+                // Initiale Ansicht rendern
+                renderProgram('jetzt');
+            } catch (error) {
+                console.error("Fehler beim Laden der API:", error);
+                document.getElementById('tv-grid').innerHTML = `
+                    <div class="no-data">Verbindung zur TV-API fehlgeschlagen. Bitte lade die Seite neu.</div>
+                `;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // Render-Logik (Filtert die echten Daten)
         function renderProgram(timeKey) {
             const grid = document.getElementById('tv-grid');
             const categoryTitle = document.getElementById('current-category');
             
-            // Setze Titel basierend auf der Zeit
-            if(timeKey === 'jetzt') categoryTitle.innerText = "Das läuft aktuell (Live)";
-            if(timeKey === '2015') categoryTitle.innerText = "Prime-Time: 20:15 Uhr";
-            if(timeKey === '2200') categoryTitle.innerText = "Spätprogramm ab 22:00 Uhr";
-
             grid.innerHTML = ''; // Grid leeren
-
-            const shows = programData[timeKey];
             
-            shows.forEach(show => {
-                const badge = show.isLive ? '<span class="badge live">Live</span>' : '<span class="badge">Tipp</span>';
-                const progressHTML = show.progress > 0 ? `
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${show.progress}%"></div>
-                    </div>` : '';
+            // Aktuelle Uhrzeit berechnen (Format HH:MM)
+            const now = new Date();
+            const currentHour = String(now.getHours()).padStart(2, '0');
+            const currentMinute = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${currentHour}:${currentMinute}`;
+
+            let filteredShows = [];
+
+            // Filter anwenden
+            if (timeKey === 'jetzt') {
+                categoryTitle.innerText = "Jetzt / Demnächst im TV";
+                // Alles was ab jetzt oder maximal 45 Minuten vorher gestartet ist, nehmen wir als "Jetzt"
+                // Zur Vereinfachung: Wir nehmen Sendungen, die in der Zukunft liegen und cappen auf 12 Stück
+                filteredShows = allShows
+                    .filter(item => item.airtime >= currentTimeStr)
+                    .slice(0, 15);
+            } 
+            else if (timeKey === '2015') {
+                categoryTitle.innerText = "Prime-Time: 20:15 Uhr";
+                // Genau 20:15 Uhr
+                filteredShows = allShows.filter(item => item.airtime === '20:15');
+            } 
+            else if (timeKey === '2200') {
+                categoryTitle.innerText = "Spätprogramm ab 22:00 Uhr";
+                // Alles ab 22:00 Uhr
+                filteredShows = allShows
+                    .filter(item => item.airtime >= '22:00')
+                    .slice(0, 15);
+            }
+
+            // Fallback, wenn keine Sendungen da sind
+            if (filteredShows.length === 0) {
+                grid.innerHTML = '<div class="no-data">Für diesen Zeitraum liegen aktuell keine Daten vor.</div>';
+                return;
+            }
+            
+            // Karten aus den API-Daten generieren
+            filteredShows.forEach(item => {
+                // TVMaze JSON sicher auslesen (manche Felder können null sein)
+                const channel = item.show.network ? item.show.network.name : (item.show.webChannel ? item.show.webChannel.name : 'Unbekannt');
+                const showTitle = item.show.name || 'Unbekannter Titel';
+                const episodeTitle = item.name || '';
+                const time = item.airtime || '--:--';
+                
+                // HTML-Tags aus der API-Beschreibung entfernen
+                let desc = item.show.summary ? item.show.summary.replace(/<[^>]*>?/gm, '') : 'Keine genaue Beschreibung verfügbar.';
 
                 const cardHTML = `
                     <div class="card">
                         <div class="card-header">
-                            <span class="channel-name">${show.channel}</span>
-                            ${badge}
+                            <span class="channel-name">${channel}</span>
+                            <span class="badge">Live API</span>
                         </div>
                         <div class="card-body">
-                            <div class="show-time">${show.time}</div>
-                            <div class="show-title">${show.title}</div>
-                            <div class="show-desc">${show.desc}</div>
-                            ${progressHTML}
+                            <div class="show-time">${time} Uhr</div>
+                            <div class="show-title">${showTitle}</div>
+                            ${episodeTitle ? `<div class="episode-title">${episodeTitle}</div>` : ''}
+                            <div class="show-desc">${desc}</div>
                         </div>
                     </div>
                 `;
@@ -289,20 +329,19 @@
             });
         }
 
-        // Filter-Logik für die Buttons
+        // Button Click Handler
         function filterProgram(timeKey, btnElement) {
-            // Aktiven State bei Buttons anpassen
-            const buttons = document.querySelectorAll('.filter-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
+            // Aktiven Button markieren
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
-
-            // Neues Programm rendern
+            
+            // Rendern
             renderProgram(timeKey);
         }
 
-        // Initiale Ladung der "Jetzt" Seite
+        // API Abruf beim Laden der Seite starten
         window.onload = () => {
-            renderProgram('jetzt');
+            fetchProgramData();
         };
     </script>
 </body>
