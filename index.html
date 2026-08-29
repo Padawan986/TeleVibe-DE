@@ -118,30 +118,59 @@
             'n-tv', 'WELT', 'DMAX', 'NITRO', 'ZDFneo', 'Sixx', 'Super RTL', 'KiKA', 'Phoenix', 'Tele 5'
         ];
 
-        // HIER KOMMEN DIE ECHTEN DATEN REIN. 
-        // Wenn für eine Zeit/einen Sender hier nichts steht, zeigt die Seite "Keine Daten".
-        const realScheduleData = [
-            // Echte Beispiele für Heute (dayOffset: 0)
-            { dayOffset: 0, channel: 'Das Erste', start: '20:00', end: '20:15', title: 'Tagesschau', desc: 'Die wichtigsten Nachrichten des Tages.' },
-            { dayOffset: 0, channel: 'Das Erste', start: '20:15', end: '21:45', title: 'Tatort', desc: 'Spannender Krimi mit den Kommissaren.' },
-            { dayOffset: 0, channel: 'Das Erste', start: '21:45', end: '22:15', title: 'Tagesthemen', desc: 'Hintergrundberichte und Analysen.' },
-            
-            { dayOffset: 0, channel: 'ZDF', start: '19:00', end: '19:25', title: 'heute', desc: 'Nachrichten.' },
-            { dayOffset: 0, channel: 'ZDF', start: '20:15', end: '21:45', title: 'Der Bergdoktor', desc: 'Dr. Martin Gruber muss eine schwere Entscheidung treffen.' },
-            { dayOffset: 0, channel: 'ZDF', start: '21:45', end: '22:15', title: 'heute journal', desc: 'Das Nachrichtenmagazin des ZDF.' },
-            
-            { dayOffset: 0, channel: 'RTL', start: '18:45', end: '19:05', title: 'RTL Aktuell', desc: 'Die News am frühen Abend.' },
-            { dayOffset: 0, channel: 'RTL', start: '20:15', end: '22:15', title: 'Wer wird Millionär?', desc: 'Quizshow mit Günther Jauch.' },
-            
-            { dayOffset: 0, channel: 'ProSieben', start: '20:15', end: '22:50', title: 'The Masked Singer', desc: 'Wer singt unter der Maske?' },
-            
-            // Reale Daten für Morgen (dayOffset: 1)
-            { dayOffset: 1, channel: 'Das Erste', start: '20:15', end: '21:45', title: 'Sportschau', desc: 'Zusammenfassung der Bundesliga-Spiele.' }
-        ];
+        // Hier speichern wir die echten Daten, sobald sie geladen sind
+        let realScheduleData = [];
 
         let activeDateOffset = 0;
         let activeTimeFilter = 'jetzt';
         let activeChannel = 'all';
+
+        // Funktion um Daten von der API zu holen
+        async function fetchRealTVData() {
+            const titleEl = document.getElementById('sectionTitle');
+            titleEl.innerText = "Lade Live-Daten von Server...";
+            
+            try {
+                // HIER die echte URL der API eintragen aus der Dokumentation
+                // Falls es im Browser einen CORS-Fehler gibt, setze einen Proxy davor:
+                // z.B. const apiUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.free-epg.de/v1/guide');
+                const apiUrl = 'https://api.free-epg.de/v1/guide'; 
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Netzwerk-Fehler beim Abrufen der Daten');
+                
+                const apiData = await response.json();
+                
+                // Die Daten aus der API in unser Format umwandeln
+                // ACHTUNG: Passe die item.-Werte an das JSON-Format der API an!
+                realScheduleData = apiData.map(item => {
+                    return {
+                        dayOffset: 0, // Müsste anhand des Datums aus der API berechnet werden
+                        channel: item.channel_name || 'Unbekannt',
+                        start: item.start_time || '00:00',
+                        end: item.end_time || '00:00',
+                        title: item.title || 'Kein Titel',
+                        desc: item.description || 'Keine Beschreibung verfügbar.'
+                    };
+                });
+
+                // Nach dem Laden die Filter anwenden und anzeigen
+                applyFilters();
+
+            } catch (error) {
+                console.error('Fehler beim Laden der API:', error);
+                
+                // Hier wird konsequent Fehler/Keine Daten angezeigt, wenn die echte API fehlschlägt
+                document.getElementById('tvGrid').innerHTML = `
+                    <div class="no-results" style="color: var(--live-red); border-color: var(--border);">
+                        <strong>Verbindungsfehler oder keine Daten!</strong><br>
+                        Konnte keine echten Daten von der API abrufen.<br>
+                        <em>Tipp: Prüfe die API URL im Code und die Entwicklerkonsole (F12) auf CORS-Fehler.</em>
+                    </div>`;
+                document.getElementById('showCount').innerText = "0 Sendungen";
+                document.getElementById('sectionTitle').innerText = "Programm nicht verfügbar";
+            }
+        }
 
         function initUI() {
             const cScroll = document.getElementById('channelScroll');
@@ -166,7 +195,11 @@
             }
         }
 
-        function timeToMinutes(str) { const [h, m] = str.split(':').map(Number); return h * 60 + m; }
+        function timeToMinutes(str) { 
+            if(!str || !str.includes(':')) return 0;
+            const [h, m] = str.split(':').map(Number); 
+            return h * 60 + m; 
+        }
         function getCurrentMinutes() { const now = new Date(); return now.getHours() * 60 + now.getMinutes(); }
         function updateClock() { document.getElementById('clock').innerText = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr'; }
         setInterval(updateClock, 1000);
@@ -195,11 +228,13 @@
         }
 
         function applyFilters() {
+            // Wenn noch keine Daten geladen wurden, brechen wir hier ab (Wartet auf API)
+            if(realScheduleData.length === 0) return;
+
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
             const titleEl = document.getElementById('sectionTitle');
             const nowMins = getCurrentMinutes();
             
-            // Greife NUR noch auf die echten Daten zu
             let result = realScheduleData.filter(s => s.dayOffset === activeDateOffset);
             const dateLabels = ['Heute', 'Morgen', 'Übermorgen', 'in 3 Tagen', 'in 4 Tagen'];
             let titlePrefix = dateLabels[activeDateOffset];
@@ -242,7 +277,6 @@
             if (activeTimeFilter === 'ganzer-tag') grid.classList.add('timeline-mode');
             else grid.classList.remove('timeline-mode');
 
-            // HIER greift das "Keine Daten": Wenn das echte Array für die Auswahl leer ist.
             if (shows.length === 0) {
                 grid.innerHTML = `
                     <div class="no-results">
@@ -300,7 +334,12 @@
             });
         }
 
-        window.onload = () => { initUI(); updateClock(); applyFilters(); };
+        // Beim Starten laden wir jetzt zuerst die API-Daten
+        window.onload = () => { 
+            initUI(); 
+            updateClock(); 
+            fetchRealTVData(); 
+        };
     </script>
 </body>
 </html>
