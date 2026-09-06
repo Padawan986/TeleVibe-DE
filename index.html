@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeleVibe DE | Dein TV-Guide</title>
+    <title>TeleVibe DE | Dein TV-Guide (FreeEPG)</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -50,7 +50,7 @@
 
         .tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
         
-        /* Timeline Modus für ganzen Tag */
+        /* Timeline Modus */
         .tv-grid.timeline-mode { grid-template-columns: 1fr; gap: 0.75rem; }
         .tv-grid.timeline-mode .card { flex-direction: row; align-items: center; padding: 1rem 1.25rem; gap: 1rem; }
         .tv-grid.timeline-mode .card-header { margin-bottom: 0; flex-direction: column; align-items: flex-start; min-width: 120px; border-bottom: none; }
@@ -99,90 +99,128 @@
         </div>
         <div class="scroll-row" id="channelScroll">
             <span class="row-label">Sender:</span>
-            <button class="btn btn-channel active" onclick="setChannelFilter('all', this)">Alle Sender</button>
+            <button class="btn btn-channel active" onclick="setChannelFilter('all', this)">Lade Sender...</button>
         </div>
         <input type="text" id="searchInput" class="search-input" placeholder="Nach Sendung oder Sender suchen..." oninput="applyFilters()">
     </div>
 
     <main>
         <div class="section-header">
-            <h2 class="section-title" id="sectionTitle">Lade Programm...</h2>
+            <h2 class="section-title" id="sectionTitle">Lade Programm von FreeEPG (Das kann ein paar Sekunden dauern)...</h2>
             <span class="show-count" id="showCount"></span>
         </div>
         <div class="tv-grid" id="tvGrid"></div>
     </main>
 
     <script>
-        const channelOrder = [
-            'Das Erste', 'ZDF', 'RTL', 'Sat.1', 'ProSieben', 'Kabel Eins', 'RTLZWEI', 'VOX', '3sat', 'Arte',
-            'n-tv', 'WELT', 'DMAX', 'NITRO', 'ZDFneo', 'Sixx', 'Super RTL', 'KiKA', 'Phoenix', 'Tele 5'
-        ];
-
-        // Hier speichern wir die echten Daten, sobald sie geladen sind
         let realScheduleData = [];
-
+        let availableChannels = [];
+        
         let activeDateOffset = 0;
         let activeTimeFilter = 'jetzt';
         let activeChannel = 'all';
 
-        // Funktion um Daten von der API zu holen
+        // Hilfsfunktion: XMLTV Datumsformat (z.B. "20260906201500 +0200") in JS Date umwandeln
+        function parseXmltvDate(str) {
+            if (!str) return new Date();
+            const year = parseInt(str.substring(0,4));
+            const month = parseInt(str.substring(4,6)) - 1;
+            const day = parseInt(str.substring(6,8));
+            const hour = parseInt(str.substring(8,10));
+            const min = parseInt(str.substring(10,12));
+            const sec = parseInt(str.substring(12,14));
+            return new Date(year, month, day, hour, min, sec);
+        }
+
+        // Hilfsfunktion: Führende Nullen
+        function formatTime(dt) {
+            return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+        }
+
         async function fetchRealTVData() {
-            const titleEl = document.getElementById('sectionTitle');
-            titleEl.innerText = "Lade Live-Daten von Server...";
-            
             try {
-                // HIER die echte URL der API eintragen aus der Dokumentation
-                // Falls es im Browser einen CORS-Fehler gibt, setze einen Proxy davor:
-                // z.B. const apiUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.free-epg.de/v1/guide');
-                const apiUrl = 'https://api.free-epg.de/v1/guide'; 
+                // Wir nutzen AllOrigins als Proxy, um CORS-Fehler im reinen Browser zu vermeiden.
+                // Ruft den offiziellen FreeEPG Deutschland Feed ab.
+                const apiUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.free-epg.de/api/epg/de.xml');
                 
                 const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error('Netzwerk-Fehler beim Abrufen der Daten');
+                if (!response.ok) throw new Error('Netzwerk-Fehler');
                 
-                const apiData = await response.json();
+                const xmlText = await response.text();
                 
-                // Die Daten aus der API in unser Format umwandeln
-                // ACHTUNG: Passe die item.-Werte an das JSON-Format der API an!
-                realScheduleData = apiData.map(item => {
-                    return {
-                        dayOffset: 0, // Müsste anhand des Datums aus der API berechnet werden
-                        channel: item.channel_name || 'Unbekannt',
-                        start: item.start_time || '00:00',
-                        end: item.end_time || '00:00',
-                        title: item.title || 'Kein Titel',
-                        desc: item.description || 'Keine Beschreibung verfügbar.'
-                    };
-                });
+                // XML im Browser parsen
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                
+                // 1. Alle Sender (Channels) auslesen und Mappen (ID -> Name)
+                const channelMap = {};
+                const channelNodes = xmlDoc.getElementsByTagName("channel");
+                for (let i = 0; i < channelNodes.length; i++) {
+                    const id = channelNodes[i].getAttribute("id");
+                    const nameNode = channelNodes[i].getElementsByTagName("display-name")[0];
+                    if (id && nameNode) {
+                        channelMap[id] = nameNode.textContent;
+                    }
+                }
 
-                // Nach dem Laden die Filter anwenden und anzeigen
+                // Extrahiere Sender für die Filter-Buttons oben (auf max. 30 begrenzen, um UI sauber zu halten)
+                availableChannels = Object.values(channelMap).slice(0, 30);
+                initChannelUI(); // UI updaten
+
+                // 2. Alle Sendungen (Programme) auslesen
+                const progNodes = xmlDoc.getElementsByTagName("programme");
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Mitternacht heute
+                
+                for (let i = 0; i < progNodes.length; i++) {
+                    const prog = progNodes[i];
+                    const startStr = prog.getAttribute("start");
+                    const stopStr = prog.getAttribute("stop");
+                    const channelId = prog.getAttribute("channel");
+                    
+                    if (!startStr || !stopStr || !channelId) continue;
+
+                    const startDt = parseXmltvDate(startStr);
+                    const stopDt = parseXmltvDate(stopStr);
+                    
+                    // Berechne den Tag-Offset (0 = Heute, 1 = Morgen, etc.)
+                    const showDay = new Date(startDt);
+                    showDay.setHours(0, 0, 0, 0);
+                    const dayOffset = Math.round((showDay - today) / (1000 * 60 * 60 * 24));
+                    
+                    // Wir speichern nur Daten für Heute bis in 4 Tagen um Speicherplatz zu sparen
+                    if (dayOffset >= 0 && dayOffset <= 4) {
+                        const titleNode = prog.getElementsByTagName("title")[0];
+                        const descNode = prog.getElementsByTagName("desc")[0];
+                        
+                        realScheduleData.push({
+                            dayOffset: dayOffset,
+                            channel: channelMap[channelId] || channelId, // Richtiger Sendername
+                            start: formatTime(startDt),
+                            end: formatTime(stopDt),
+                            title: titleNode ? titleNode.textContent : 'Unbekannt',
+                            desc: descNode ? descNode.textContent : 'Keine Beschreibung'
+                        });
+                    }
+                }
+
                 applyFilters();
 
             } catch (error) {
-                console.error('Fehler beim Laden der API:', error);
-                
-                // Hier wird konsequent Fehler/Keine Daten angezeigt, wenn die echte API fehlschlägt
+                console.error('Fehler beim Laden von FreeEPG:', error);
                 document.getElementById('tvGrid').innerHTML = `
                     <div class="no-results" style="color: var(--live-red); border-color: var(--border);">
-                        <strong>Verbindungsfehler oder keine Daten!</strong><br>
-                        Konnte keine echten Daten von der API abrufen.<br>
-                        <em>Tipp: Prüfe die API URL im Code und die Entwicklerkonsole (F12) auf CORS-Fehler.</em>
+                        <strong>Fehler beim EPG Download</strong><br>
+                        Die Verbindung zu free-epg.de ist fehlgeschlagen oder die XML-Datei ist zu groß für den Browser.<br>
+                        <em>Tipp: Entwicklerkonsole (F12) prüfen.</em>
                     </div>`;
-                document.getElementById('showCount').innerText = "0 Sendungen";
                 document.getElementById('sectionTitle').innerText = "Programm nicht verfügbar";
             }
         }
 
-        function initUI() {
-            const cScroll = document.getElementById('channelScroll');
-            channelOrder.forEach(channel => {
-                const btn = document.createElement('button');
-                btn.className = 'btn btn-channel';
-                btn.innerText = channel;
-                btn.onclick = function() { setChannelFilter(channel, this); };
-                cScroll.appendChild(btn);
-            });
-
+        function initDateUI() {
             const dScroll = document.getElementById('dateScroll');
+            dScroll.innerHTML = '<span class="row-label">Datum:</span>'; // Reset
             const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
             for(let i=0; i<5; i++) {
                 const d = new Date(); d.setDate(d.getDate() + i);
@@ -195,12 +233,32 @@
             }
         }
 
+        function initChannelUI() {
+            const cScroll = document.getElementById('channelScroll');
+            cScroll.innerHTML = '<span class="row-label">Sender:</span>'; // Reset
+            
+            const allBtn = document.createElement('button');
+            allBtn.className = 'btn btn-channel active';
+            allBtn.innerText = 'Alle Sender';
+            allBtn.onclick = function() { setChannelFilter('all', this); };
+            cScroll.appendChild(allBtn);
+
+            availableChannels.forEach(channel => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-channel';
+                btn.innerText = channel;
+                btn.onclick = function() { setChannelFilter(channel, this); };
+                cScroll.appendChild(btn);
+            });
+        }
+
         function timeToMinutes(str) { 
             if(!str || !str.includes(':')) return 0;
             const [h, m] = str.split(':').map(Number); 
             return h * 60 + m; 
         }
         function getCurrentMinutes() { const now = new Date(); return now.getHours() * 60 + now.getMinutes(); }
+        
         function updateClock() { document.getElementById('clock').innerText = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr'; }
         setInterval(updateClock, 1000);
 
@@ -228,7 +286,6 @@
         }
 
         function applyFilters() {
-            // Wenn noch keine Daten geladen wurden, brechen wir hier ab (Wartet auf API)
             if(realScheduleData.length === 0) return;
 
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
@@ -241,13 +298,28 @@
 
             if (activeTimeFilter === 'jetzt') {
                 titleEl.innerText = "🔴 Jetzt Live im TV";
-                result = result.filter(s => timeToMinutes(s.start) <= nowMins && timeToMinutes(s.end) > nowMins);
+                result = result.filter(s => {
+                    const start = timeToMinutes(s.start);
+                    let end = timeToMinutes(s.end);
+                    if (end < start) end += 1440; // Sendung geht über Mitternacht
+                    return start <= nowMins && end > nowMins;
+                });
             } else if (activeTimeFilter === '2015') {
                 titleEl.innerText = `${titlePrefix}: Prime-Time (20:15 Uhr)`;
-                result = result.filter(s => timeToMinutes(s.start) <= 1215 && timeToMinutes(s.end) > 1215);
+                result = result.filter(s => {
+                    const start = timeToMinutes(s.start);
+                    let end = timeToMinutes(s.end);
+                    if (end < start) end += 1440;
+                    return start <= 1215 && end > 1215;
+                });
             } else if (activeTimeFilter === '2200') {
                 titleEl.innerText = `${titlePrefix}: Spätprogramm (22:00 Uhr)`;
-                result = result.filter(s => timeToMinutes(s.start) <= 1320 && timeToMinutes(s.end) > 1320);
+                result = result.filter(s => {
+                    const start = timeToMinutes(s.start);
+                    let end = timeToMinutes(s.end);
+                    if (end < start) end += 1440;
+                    return start <= 1320 && end > 1320;
+                });
             } else if (activeTimeFilter === 'ganzer-tag') {
                 titleEl.innerText = `${titlePrefix}: Komplettes Programm`;
             }
@@ -255,12 +327,13 @@
             if (activeChannel !== 'all') result = result.filter(s => s.channel === activeChannel);
             if (searchVal.trim() !== '') result = result.filter(s => s.title.toLowerCase().includes(searchVal) || s.channel.toLowerCase().includes(searchVal));
 
+            // Sortieren nach Zeit oder nach Sender
             result.sort((a, b) => {
                 if (activeTimeFilter === 'ganzer-tag') {
-                    const timeDiff = timeToMinutes(a.start) - timeToMinutes(b.start);
-                    if (timeDiff !== 0) return timeDiff;
+                    return timeToMinutes(a.start) - timeToMinutes(b.start);
                 }
-                return channelOrder.indexOf(a.channel) - channelOrder.indexOf(b.channel);
+                // Sortieren alphabetisch nach Sendernamen, falls Live/20:15
+                return a.channel.localeCompare(b.channel);
             });
 
             renderGrid(result);
@@ -280,15 +353,17 @@
             if (shows.length === 0) {
                 grid.innerHTML = `
                     <div class="no-results">
-                        <strong>Keine Daten verfügbar.</strong><br>
-                        Für diese Zeit oder diesen Sender liegen uns aktuell keine Programmdaten vor.
+                        <strong>Keine Daten.</strong><br>
+                        Für diesen Filter liegen im FreeEPG aktuell keine Sendungen vor.
                     </div>`;
                 return;
             }
 
             shows.forEach(show => {
                 const startM = timeToMinutes(show.start);
-                const endM = timeToMinutes(show.end);
+                let endM = timeToMinutes(show.end);
+                if (endM < startM) endM += 1440; // Mitternacht korrigieren
+
                 const isLive = (activeDateOffset === 0 && nowMins >= startM && nowMins < endM);
                 
                 let progressHTML = '';
@@ -334,9 +409,8 @@
             });
         }
 
-        // Beim Starten laden wir jetzt zuerst die API-Daten
         window.onload = () => { 
-            initUI(); 
+            initDateUI();
             updateClock(); 
             fetchRealTVData(); 
         };
