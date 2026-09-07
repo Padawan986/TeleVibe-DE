@@ -10,19 +10,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Komprimierte EPG-Datei von FreeEPG laden (~3MB statt 60MB)
+    // 1. Komprimierte EPG-Datei von FreeEPG laden
     const response = await fetch('https://www.free-epg.de/api/epg/de.xml.gz', {
-      headers: { 'User-Agent': 'TeleVibeDE/1.0' }
+      headers: { 
+        'User-Agent': 'TeleVibeDE/1.0',
+        'Accept-Encoding': 'gzip, deflate'
+      }
     });
 
     if (!response.ok) {
       throw new Error(`FreeEPG Server-Fehler: HTTP ${response.status}`);
     }
 
-    // 2. Im Speicher entpacken (Gzip -> XML)
     const arrayBuffer = await response.arrayBuffer();
-    const decompressed = zlib.gunzipSync(Buffer.from(arrayBuffer));
-    const xmlText = decompressed.toString('utf-8');
+    const buffer = Buffer.from(arrayBuffer);
+    
+    let xmlText;
+
+    // 2. Prüfen, ob die Datei komprimiert ist (GZIP Magic Bytes: 1F 8B)
+    // Manchmal entpackt Node.js "fetch" die Datei bereits automatisch im Hintergrund.
+    if (buffer[0] === 0x1F && buffer[1] === 0x8B) {
+      // Ist noch gezippt -> manuell entpacken
+      const decompressed = zlib.gunzipSync(buffer);
+      xmlText = decompressed.toString('utf-8');
+    } else {
+      // Ist bereits entpackt (Node.js hat das für uns erledigt)
+      xmlText = buffer.toString('utf-8');
+    }
 
     // 3. Sender extrahieren (ID -> Name)
     const channelMap = {};
@@ -103,7 +117,7 @@ export default async function handler(req, res) {
 
     const channels = Array.from(new Set(schedule.map(s => s.channel))).sort();
 
-    // Vercel Edge Caching: Speichert die Antwort für 1 Stunde auf Vercel-Servern
+    // Vercel Edge Caching: Speichert die Antwort für 1 Stunde auf Vercel-Servern (Spart Traffic zu FreeEPG)
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json({ channels, schedule });
 
