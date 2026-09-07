@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/epg",
-      "destination": "https://www.free-epg.de/api/epg/de.xml"
+      "destination": "https://www.free-epg.de/api/epg/de.xml.gz"
     }
   ]
 }
