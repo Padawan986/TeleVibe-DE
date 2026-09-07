@@ -26,75 +26,83 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(arrayBuffer);
     
     let xmlText;
-
-    // 2. Prüfen, ob die Datei komprimiert ist (GZIP Magic Bytes: 1F 8B)
-    // Manchmal entpackt Node.js "fetch" die Datei bereits automatisch im Hintergrund.
+    // Prüfen, ob Datei komprimiert ist (GZIP Magic Bytes: 1F 8B)
     if (buffer[0] === 0x1F && buffer[1] === 0x8B) {
-      // Ist noch gezippt -> manuell entpacken
       const decompressed = zlib.gunzipSync(buffer);
       xmlText = decompressed.toString('utf-8');
     } else {
-      // Ist bereits entpackt (Node.js hat das für uns erledigt)
       xmlText = buffer.toString('utf-8');
     }
 
-    // 3. Sender extrahieren (ID -> Name)
+    // 2. Sender extrahieren (ID -> Name) - reihenfolgeunabhängig
     const channelMap = {};
-    const channelRegex = /<channel\s+id="([^"]+)">[\s\S]*?<display-name[^>]*>([^<]+)<\/display-name>/g;
+    const channelRegex = /<channel\s+([^>]+)>([\s\S]*?)<\/channel>/g;
     let match;
     while ((match = channelRegex.exec(xmlText)) !== null) {
-      const id = match[1];
-      const name = match[2]
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      channelMap[id] = name;
-    }
-
-    // Hilfsfunktion: Datums-Parsing
-    function parseXmltvDate(str) {
-      if (!str || str.length < 14) return new Date();
-      try {
-        const y = str.substring(0,4), m = str.substring(4,6), d = str.substring(6,8);
-        const h = str.substring(8,10), min = str.substring(10,12), s = str.substring(12,14);
-        let tz = "+00:00";
-        if (str.length >= 19) {
-          tz = str.substring(15,18) + ":" + str.substring(18,20);
-        }
-        return new Date(`${y}-${m}-${d}T${h}:${min}:${s}${tz}`);
-      } catch(e) {
-        return new Date();
+      const attrStr = match[1];
+      const content = match[2];
+      
+      const idMatch = attrStr.match(/id="([^"]+)"/);
+      const nameMatch = content.match(/<display-name[^>]*>([^<]+)<\/display-name>/);
+      
+      if (idMatch && nameMatch) {
+        const id = idMatch[1];
+        const name = nameMatch[1]
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        channelMap[id] = name;
       }
     }
 
-    function formatTime(dt) {
-      return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+    // Hilfsfunktionen für Datum & Uhrzeit
+    function getTodayYYYYMMDD() {
+      const now = new Date();
+      const options = { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' };
+      const formatter = new Intl.DateTimeFormat('en-CA', options); // Ausgabe: YYYY-MM-DD
+      return formatter.format(now).replace(/-/g, '');
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    function getDayOffset(progDateStr, todayStr) {
+      if (!progDateStr || progDateStr.length < 8) return -999;
+      const pY = parseInt(progDateStr.substring(0,4)), pM = parseInt(progDateStr.substring(4,6))-1, pD = parseInt(progDateStr.substring(6,8));
+      const tY = parseInt(todayStr.substring(0,4)), tM = parseInt(todayStr.substring(4,6))-1, tD = parseInt(todayStr.substring(6,8));
+      const pDate = Date.UTC(pY, pM, pD);
+      const tDate = Date.UTC(tY, tM, tD);
+      return Math.round((pDate - tDate) / (1000 * 60 * 60 * 24));
+    }
 
-    // 4. Sendungen extrahieren
-    const progRegex = /<programme\s+start="([^"]+)"\s+stop="([^"]+)"\s+channel="([^"]+)">([\s\S]*?)<\/programme>/g;
+    function formatTime(str) {
+      if (!str || str.length < 12) return '00:00';
+      return str.substring(8, 10) + ':' + str.substring(10, 12);
+    }
+
+    const todayStr = getTodayYYYYMMDD();
+
+    // 3. Sendungen extrahieren (reihenfolgeunabhängig)
+    const progRegex = /<programme\s+([^>]+)>([\s\S]*?)<\/programme>/g;
     const titleRegex = /<title[^>]*>([^<]+)<\/title>/;
     const descRegex = /<desc[^>]*>([^<]+)<\/desc>/;
 
     const schedule = [];
 
     while ((match = progRegex.exec(xmlText)) !== null) {
-      const startStr = match[1];
-      const stopStr = match[2];
-      const channelId = match[3];
-      const content = match[4];
+      const attrStr = match[1];
+      const content = match[2];
 
-      const startDt = parseXmltvDate(startStr);
-      const stopDt = parseXmltvDate(stopStr);
+      const startMatch = attrStr.match(/start="([^"]+)"/);
+      const stopMatch = attrStr.match(/stop="([^"]+)"/);
+      const channelMatch = attrStr.match(/channel="([^"]+)"/);
 
-      const showDay = new Date(startDt);
-      showDay.setHours(0, 0, 0, 0);
-      const dayOffset = Math.round((showDay - today) / (1000 * 60 * 60 * 24));
+      if (!startMatch || !stopMatch || !channelMatch) continue;
+
+      const startStr = startMatch[1];
+      const stopStr = stopMatch[1];
+      const channelId = channelMatch[1];
+
+      const dayOffset = getDayOffset(startStr, todayStr);
 
       // Nur Sendungen von Heute bis in 3 Tagen speichern
       if (dayOffset >= 0 && dayOffset <= 3) {
@@ -104,11 +112,13 @@ export default async function handler(req, res) {
         const title = titleMatch ? titleMatch[1] : 'Unbekannt';
         const desc = descMatch ? descMatch[1] : 'Keine Beschreibung vorhanden.';
 
+        const channelName = channelMap[channelId] || channelId;
+
         schedule.push({
           dayOffset,
-          channel: channelMap[channelId] || channelId,
-          start: formatTime(startDt),
-          end: formatTime(stopDt),
+          channel: channelName,
+          start: formatTime(startStr),
+          end: formatTime(stopStr),
           title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
           desc: desc.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
         });
@@ -117,7 +127,7 @@ export default async function handler(req, res) {
 
     const channels = Array.from(new Set(schedule.map(s => s.channel))).sort();
 
-    // Vercel Edge Caching: Speichert die Antwort für 1 Stunde auf Vercel-Servern (Spart Traffic zu FreeEPG)
+    // Vercel Edge Cache: Speichert das Ergebnis für 1 Stunde
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json({ channels, schedule });
 
